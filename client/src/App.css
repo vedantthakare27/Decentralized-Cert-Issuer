@@ -1,0 +1,114 @@
+/* client/src/App.css */
+
+.App {
+  text-align: center;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  color: white;
+  padding: 20px;
+}
+
+.App-header {
+  width: 100%;
+  max-width: 800px;
+  margin-bottom: 30px;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  width: 100%;
+  max-width: 800px;
+}
+
+.panel {
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  text-align: left;
+}
+
+.issuer-panel {
+  background-color: #3b5998; /* Blue for Issuer (Institution) */
+}
+
+.verifier-panel {
+  background-color: #008080; /* Teal for Verifier (Public) */
+}
+
+h2 {
+  text-align: center;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  padding-bottom: 10px;
+  margin-top: 0;
+}
+
+form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+input[type="text"], input[type="date"], input[type="file"] {
+  padding: 10px;
+  border-radius: 4px;
+  border: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.connect-button {
+    background-color: #f7931a; /* Orange for MetaMask/Connect */
+    color: white;
+    font-size: 1.2em;
+}
+
+.issuer-panel button {
+  background-color: #4CAF50; /* Green for Issue */
+  color: white;
+}
+
+.verifier-panel button {
+  background-color: #e57373; /* Red for Verify */
+  color: white;
+}
+
+.status {
+  margin-top: 15px;
+  background-color: #555;
+  padding: 10px;
+  border-radius: 4px;
+  word-wrap: break-word;
+  color: #fff;
+}
+
+.verification-output {
+    margin-top: 15px;
+    padding: 15px;
+    border: 1px dashed white;
+    border-radius: 4px;
+    background-color: #333;
+}
+
+.verification-output h3 {
+    color: #4CAF50;
+}
+
+.success { color: #d4edda; background-color: #155724; border: 1px solid #c3e6cb; padding: 10px; border-radius: 4px;}
+.failure { color: #f8d7da; background-color: #721c24; border: 1px solid #f5c6cb; padding: 10px; border-radius: 4px;}
+.error { color: #ffeeba; background-color: #856404; border: 1px solid #ffeeba; padding: 10px; border-radius: 4px;}
