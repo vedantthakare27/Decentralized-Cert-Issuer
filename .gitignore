@@ -1,20 +1,29 @@
-# Node modules
+# Dependencies
 /node_modules
 
-# Compilation output
-/dist
-
-# pnpm deploy output
-/bundle
-
-# Hardhat Build Artifacts
+# Compilation Output / Hardhat Artifacts
 /artifacts
-
-# Hardhat compilation (v2) support directory
 /cache
-
-# Typechain output
-/types
-
-# Hardhat coverage reports
+/dist
+/build
 /coverage
+/coverage.json
+/typechain
+/typechain-types
+/ignition
+
+# Secrets/Configuration (CRITICAL)
+# This excludes a .env file if one were placed in the root
+.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS and Editor Specific Files
+.DS_Store
+.idea/
+.vscode/
+*.swp
