@@ -1,52 +1,47 @@
-// client/src/App.js - FINAL APPLICATION CODE
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserProvider, Contract, ethers } from 'ethers';
 import axios from 'axios';
 import './App.css'; 
 
-// 1. IMPORT ABI & ADDRESS
 const contractABI = require('./utils/Certificate.json').abi;
-// FIX 1: Trim the address to remove potential whitespace errors that cause UNCONFIGURED_NAME
 const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS ? process.env.REACT_APP_CONTRACT_ADDRESS.trim() : null;
 const pinataJwt = process.env.REACT_APP_PINATA_JWT;
 
 function App() {
-  // State for Wallet & Contract
   const [currentAccount, setCurrentAccount] = useState(null);
   const [signer, setSigner] = useState(null); 
   const [certificateContract, setCertificateContract] = useState(null);
   
-  // State for Issuer Form
   const [studentName, setStudentName] = useState('');
   const [courseName, setCourseName] = useState('');
   const [issueDate, setIssueDate] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [issuingStatus, setIssuingStatus] = useState('');
   
-  // State for Verifier Form
   const [verifyHash, setVerifyHash] = useState('');
   const [verificationResult, setVerificationResult] = useState(null);
-
-  // --- Wallet and Contract Initialization ---
 
   const initializeContract = (newSigner) => {
     if (contractAddress && contractABI) {
       try {
-        // FIX 2: Use ethers.getAddress to validate and normalize the address string
-        const validatedAddress = ethers.getAddress(contractAddress); 
+        // Ensure '0x' prefix is present for Ethers v6 validation
+        const prefixedAddress = contractAddress.startsWith('0x') 
+          ? contractAddress 
+          : `0x${contractAddress}`;
+          
+        const validatedAddress = ethers.getAddress(prefixedAddress); 
+        
         const contract = new Contract(validatedAddress, contractABI, newSigner);
         setCertificateContract(contract);
         console.log('Contract Initialized:', validatedAddress);
       } catch (error) {
-        console.error("Contract Initialization Error: Invalid Address Format. Check .env file.", error);
-        // Set state to show the user the problem
+        console.error("Contract Initialization Error: Invalid Address Format.", error);
         setIssuingStatus('Contract Initialization Failed: Check Contract Address in .env');
       }
     }
   };
 
-  const checkIfWalletIsConnected = async () => {
+  const checkIfWalletIsConnected = useCallback(async () => {
     try {
       const { ethereum } = window;
       if (!ethereum) return alert("Make sure you have MetaMask installed!");
@@ -65,7 +60,7 @@ function App() {
     } catch (error) {
       console.log(error);
     }
-  };
+  }, [contractAddress, contractABI]);
 
   const connectWallet = async () => {
     try {
@@ -87,9 +82,7 @@ function App() {
 
   useEffect(() => {
     checkIfWalletIsConnected();
-  }, []);
-
-  // --- IPFS (Pinata) and Blockchain Functions ---
+  }, [checkIfWalletIsConnected]); 
 
   const uploadFileToPinata = async (file) => {
     setIssuingStatus('Uploading file to IPFS...');
@@ -111,7 +104,6 @@ function App() {
             }
         });
 
-        // Pinata returns the IPFS hash (CID) in the 'IpfsHash' field
         return response.data.IpfsHash; 
     } catch (error) {
         console.error("Pinata Upload Error:", error);
@@ -128,17 +120,13 @@ function App() {
     }
     
     try {
-      // 1. Upload File to IPFS
       const ipfsHash = await uploadFileToPinata(selectedFile);
       setIssuingStatus(`File uploaded. IPFS Hash (CID): ${ipfsHash}`);
 
-      // 2. Convert IPFS Hash (CID) to bytes32 for Solidity
-      // Note: We hash the string CID because the contract expects bytes32 hash,
-      // and we want a fixed-size identifier on-chain.
+      // Hash the string CID for fixed-size bytes32 on-chain storage
       const hashBytes32 = ethers.keccak256(ethers.toUtf8Bytes(ipfsHash));
       setIssuingStatus(`Registering hash on blockchain: ${hashBytes32.substring(0, 8)}...`);
 
-      // 3. Send Transaction to Blockchain
       const tx = await certificateContract.issueCertificate(
         hashBytes32,
         studentName,
@@ -167,12 +155,9 @@ function App() {
     try {
         let hashBytes32;
 
-        // Determine if input is a full CID or a bytes32 hash
         if (verifyHash.startsWith('0x') && verifyHash.length === 66) {
-            // It's already a bytes32 hash
             hashBytes32 = verifyHash;
         } else if (verifyHash.length >= 46 && verifyHash.length <= 59 && !verifyHash.startsWith('0x')) {
-            // It's likely a CID string, hash it for comparison
             hashBytes32 = ethers.keccak256(ethers.toUtf8Bytes(verifyHash));
         } else {
             setVerificationResult({ error: 'Invalid hash format. Please enter a valid CID or bytes32 hash.' });
@@ -181,10 +166,9 @@ function App() {
         
         setVerificationResult({ status: `Checking hash: ${hashBytes32.substring(0, 8)}...` });
 
-        // Call the view function
         const result = await certificateContract.verifyCertificate(hashBytes32);
         
-        const isIssued = result[0]; // The first return value (bool)
+        const isIssued = result[0];
         
         if (isIssued) {
           setVerificationResult({
@@ -193,7 +177,7 @@ function App() {
             studentName: result[1],
             courseName: result[2],
             issueDate: result[3],
-            ipfsHash: verifyHash.startsWith('0x') ? 'Hash is bytes32' : verifyHash // If input was CID, show it.
+            ipfsHash: verifyHash.startsWith('0x') ? 'Hash is bytes32' : verifyHash
           });
         } else {
           setVerificationResult({ isIssued: false });
@@ -204,8 +188,6 @@ function App() {
     }
   };
 
-
-  // --- Rendering UI Components ---
 
   const renderConnectWalletButton = () => (
     <button className="connect-button" onClick={connectWallet}>
@@ -294,8 +276,6 @@ function App() {
     </div>
   );
 
-
-  // --- Rendering UI Components ---
 
   return (
     <div className="App">
