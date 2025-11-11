@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_20-7cd81fa7e193a612d29a620db3eb15d7c78b29ad",
+  "solcVersion": "0.8.20",
+  "solcLongVersion": "0.8.20+commit.a1b79de6",
+  "userSourceNameMap": {
+    "contracts/Certificate.sol": "project/contracts/Certificate.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "shanghai",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/Certificate.sol": {
+        "content": "// SPDX-License-Identifier: MIT\r\npragma solidity ^0.8.20;\r\n\r\n/**\r\n * @title Certificate\r\n * @dev This contract manages the issuance and verification of digital certificates.\r\n * It stores a fingerprint (hash) of a certificate file, not the file itself.\r\n */\r\ncontract Certificate {\r\n\r\n    // --- State Variables ---\r\n\r\n    // The address of the institution/person who deployed the contract.\r\n    address public owner;\r\n\r\n    // This is the \"database\" of your blockchain.\r\n    mapping(bytes32 => CertificateData) public certificates;\r\n\r\n    // --- Data Structure ---\r\n\r\n    // This is a custom data type to store certificate information\r\n    struct CertificateData {\r\n        string studentName;\r\n        string courseName;\r\n        string issueDate;\r\n        bool isIssued;\r\n    }\r\n\r\n    // --- Events ---\r\n\r\n    // An event that fires when a new certificate is issued\r\n    event CertificateIssued(\r\n        bytes32 indexed certificateHash,\r\n        string studentName,\r\n        string issueDate\r\n    );\r\n\r\n    // --- Constructor ---\r\n\r\n    // This function runs only ONCE, when the contract is first deployed.\r\n    constructor() {\r\n        owner = msg.sender; // The deployer becomes the owner\r\n    }\r\n\r\n    // --- Modifiers ---\r\n\r\n    // Ensures only the 'owner' can run the function it modifies\r\n    modifier onlyOwner() {\r\n        require(msg.sender == owner, \"Only the owner can call this function\");\r\n        _;\r\n    }\r\n\r\n    // --- Functions ---\r\n\r\n    /**\r\n     * @dev Issues a new certificate. Only the owner can call this.\r\n     * @param _hash The IPFS hash (fingerprint) of the certificate file.\r\n     */\r\n    function issueCertificate(\r\n        bytes32 _hash,\r\n        string memory _studentName,\r\n        string memory _courseName,\r\n        string memory _issueDate\r\n    ) public onlyOwner {\r\n        \r\n        require(certificates[_hash].isIssued == false, \"Certificate already exists\");\r\n\r\n        // Store the new certificate data\r\n        certificates[_hash] = CertificateData(\r\n            _studentName,\r\n            _courseName,\r\n            _issueDate,\r\n            true\r\n        );\r\n\r\n        // Fire the event to log this action\r\n        emit CertificateIssued(_hash, _studentName, _issueDate);\r\n    }\r\n\r\n    /**\r\n     * @dev Verifies a certificate. Anyone can call this function for free.\r\n     * @param _hash The IPFS hash (fingerprint) to check.\r\n     */\r\n    function verifyCertificate(bytes32 _hash)\r\n        public\r\n        view\r\n        returns (\r\n            bool isIssued,\r\n            string memory studentName,\r\n            string memory courseName,\r\n            string memory issueDate\r\n        )\r\n    {\r\n        CertificateData storage cert = certificates[_hash];\r\n        \r\n        return (\r\n            cert.isIssued,\r\n            cert.studentName,\r\n            cert.courseName,\r\n            cert.issueDate\r\n        );\r\n    }\r\n}"
+      }
+    }
+  }
+}
