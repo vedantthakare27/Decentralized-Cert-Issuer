@@ -8,8 +8,10 @@ const contractABI = require('./utils/Certificate.json').abi;
 const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS ? process.env.REACT_APP_CONTRACT_ADDRESS.trim() : null;
 const pinataJwt = process.env.REACT_APP_PINATA_JWT;
 
-// Define Sepolia Chain ID globally
+// Define Sepolia Chain ID globally and a known public RPC for stability
 const SEPOLIA_CHAIN_ID = 11155111; 
+// Using a standard public RPC URL for Sepolia to stabilize network context for Ethers v6
+const SEPOLIA_RPC_URL = 'https://rpc.sepolia.org'; 
 
 function App() {
   // State variables
@@ -60,8 +62,8 @@ function App() {
             return false;
         }
 
-        // 2. Create the provider explicitly passing the chainId (Robust Fix for UNCONFIGURED_NAME)
-        const provider = new BrowserProvider(ethereum, currentChainId);
+        // 2. Create the provider explicitly passing the SEPOLIA_RPC_URL for network stability
+        const provider = new BrowserProvider(ethereum, SEPOLIA_RPC_URL);
         
         // 3. Get the Signer (Crucial for sending transactions)
         const newSigner = await provider.getSigner();
@@ -96,7 +98,7 @@ function App() {
   const connectWallet = async () => {
     try {
       const { ethereum } = window;
-      if (!ethereum) return alert("Please install a wallet extension like Rabby or MetaMask.");
+      if (!ethereum) return console.log("Please install a wallet extension like Rabby or MetaMask.");
 
       // Request accounts and trigger connection
       const accounts = await ethereum.request({ method: "eth_requestAccounts" });
@@ -166,6 +168,13 @@ function App() {
     }
 
     try {
+      // FINAL DEFENSIVE CHECK: Force network check one more time before transaction
+      const currentChainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+      const currentChainId = parseInt(currentChainIdHex, 16);
+      if (currentChainId !== SEPOLIA_CHAIN_ID) {
+          throw new Error('Wallet is on incorrect network. Please switch to Sepolia (11155111).');
+      }
+
       const ipfsHash = await uploadFileToPinata(selectedFile);
       setIssuingStatus(`File uploaded. IPFS Hash (CID): ${ipfsHash}`);
 
@@ -173,7 +182,6 @@ function App() {
       setIssuingStatus(`Registering hash on blockchain: ${hashBytes32.substring(0, 8)}...`);
 
       // Connect the contract to the signer to send a transaction
-      // This is the point where the transaction is prepared and the network context must be correct.
       const contractWithSigner = certificateContract.connect(signer);
       
       const tx = await contractWithSigner.issueCertificate(
@@ -190,7 +198,7 @@ function App() {
     } catch (error) {
       console.error("Issuing Error:", error);
       // Catch specific errors related to network context
-      if (error.code === 'UNCONFIGURED_NAME' || error.message.includes('network is not supported') || error.message.includes('chain is not currently supported')) {
+      if (error.code === 'UNCONFIGURED_NAME' || error.message.includes('network is not supported') || error.message.includes('chain is not currently supported') || error.message.includes('Wallet is on incorrect network')) {
          setIssuingStatus(`Issuing Failed: Network Error. Please ensure Rabby is on Sepolia (Chain ID: 11155111) and refresh.`);
       } else {
          setIssuingStatus(`Issuing Failed: ${error.message || error.code || 'Check Rabby for transaction details.'}`);
@@ -245,17 +253,17 @@ function App() {
     }
   };
 
-  // --- UI Rendering Functions (Simple Styling) ---
+  // --- UI Rendering Functions (Minimum Styling) ---
 
   const renderConnectWalletButton = () => (
-    <button className="connect-button w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300" onClick={connectWallet}>
+    <button className="connect-button w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 transition duration-300" onClick={connectWallet}>
       Connect Wallet
     </button>
   );
   
   const renderIssuerPanel = () => (
-    <div className="panel issuer-panel bg-gray-100 p-4 rounded shadow w-full md:w-1/2">
-      <h2 className="text-xl font-semibold mb-3 text-gray-800">Issuance Panel <span className="text-sm text-gray-500">(Owner Only)</span></h2>
+    <div className="panel issuer-panel w-full md:w-1/2 p-4 space-y-3">
+      <h2 className="text-xl font-bold mb-2">Issuance Panel <span className="text-sm text-gray-500">(Owner Only)</span></h2>
       <form onSubmit={issueCertificate} className="space-y-3">
         <input 
           type="text" 
@@ -263,7 +271,7 @@ function App() {
           value={studentName} 
           onChange={(e) => setStudentName(e.target.value)} 
           required 
-          className="w-full p-2 border border-gray-300 rounded"
+          className="w-full p-2 border"
         />
         <input 
           type="text" 
@@ -271,7 +279,7 @@ function App() {
           value={courseName} 
           onChange={(e) => setCourseName(e.target.value)} 
           required 
-          className="w-full p-2 border border-gray-300 rounded"
+          className="w-full p-2 border"
         />
         <input 
           type="date" 
@@ -279,32 +287,32 @@ function App() {
           value={issueDate} 
           onChange={(e) => setIssueDate(e.target.value)} 
           required 
-          className="w-full p-2 border border-gray-300 rounded"
+          className="w-full p-2 border"
         />
-        <div className="p-2 border border-gray-300 rounded bg-white">
+        <div className="p-2 border">
             <label className="block text-sm font-medium text-gray-700 mb-1">Select Certificate File (for IPFS):</label>
             <input 
                 type="file" 
                 onChange={(e) => setSelectedFile(e.target.files[0])} 
                 required 
-                className="w-full text-sm text-gray-500"
+                className="w-full text-sm"
             />
         </div>
         <button 
           type="submit" 
           disabled={!certificateContract || !signer}
-          className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-300 disabled:bg-gray-400"
+          className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 transition duration-300 disabled:bg-gray-400"
         >
           Issue Certificate & Record Hash
         </button>
       </form>
-      {issuingStatus && <p className={`status mt-3 p-2 rounded text-sm ${issuingStatus.includes('Success') ? 'bg-green-100 text-green-700' : issuingStatus.includes('Failed') ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'}`}>{issuingStatus}</p>}
+      {issuingStatus && <p className={`status mt-3 p-2 border text-sm ${issuingStatus.includes('Success') ? 'border-green-500 text-green-700' : issuingStatus.includes('Failed') ? 'border-red-500 text-red-700' : 'border-yellow-500 text-yellow-700'}`}>{issuingStatus}</p>}
     </div>
   );
   
   const renderVerifierPanel = () => (
-    <div className="panel verifier-panel bg-gray-100 p-4 rounded shadow w-full md:w-1/2">
-      <h2 className="text-xl font-semibold mb-3 text-gray-800">Certificate Verification</h2>
+    <div className="panel verifier-panel w-full md:w-1/2 p-4 space-y-3">
+      <h2 className="text-xl font-bold mb-2">Certificate Verification</h2>
       <p className="mb-3 text-gray-600">Enter the IPFS Hash (CID) or the bytes32 Hash:</p>
       <form onSubmit={verifyCertificate} className="space-y-3">
         <input 
@@ -313,19 +321,19 @@ function App() {
           value={verifyHash} 
           onChange={(e) => setVerifyHash(e.target.value)} 
           required 
-          className="w-full p-2 border border-gray-300 rounded"
+          className="w-full p-2 border"
         />
         <button 
           type="submit" 
           disabled={!certificateContract}
-          className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded transition duration-300 disabled:bg-gray-400"
+          className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 transition duration-300 disabled:bg-gray-400"
         >
           Verify on Blockchain
         </button>
       </form>
       
       {verificationResult && (
-        <div className="verification-output mt-3 p-3 rounded bg-white border space-y-2 text-sm">
+        <div className="verification-output mt-3 p-3 border space-y-2 text-sm">
           {verificationResult.status && <p className="text-yellow-700 font-medium">{verificationResult.status}</p>}
           {verificationResult.error && <p className="text-red-700 font-medium">Verification Error: {verificationResult.error}</p>}
           
@@ -355,9 +363,9 @@ function App() {
 
 
   return (
-    <div className="min-h-screen bg-gray-200 p-4 font-inter flex justify-center items-start">
+    <div className="min-h-screen p-4 font-inter flex justify-center items-start">
       <script src="https://cdn.tailwindcss.com"></script>
-      <div className="w-full max-w-4xl bg-white p-6 rounded-lg shadow-xl mt-8 space-y-6">
+      <div className="w-full max-w-4xl p-6 mt-8 space-y-6">
         <header className="text-center pb-4 border-b border-gray-300">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">🎓 Decentralized Certificate Issuer</h1>
           <p className="text-gray-600 mb-1">Connected Account: <span className="font-mono text-blue-600">{currentAccount || 'Not Connected'}</span></p>
