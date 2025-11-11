@@ -7,7 +7,8 @@ import './App.css';
 
 // 1. IMPORT ABI & ADDRESS
 const contractABI = require('./utils/Certificate.json').abi;
-const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS;
+// FIX 1: Trim the address to remove potential whitespace errors that cause UNCONFIGURED_NAME
+const contractAddress = process.env.REACT_APP_CONTRACT_ADDRESS ? process.env.REACT_APP_CONTRACT_ADDRESS.trim() : null;
 const pinataJwt = process.env.REACT_APP_PINATA_JWT;
 
 function App() {
@@ -31,9 +32,17 @@ function App() {
 
   const initializeContract = (newSigner) => {
     if (contractAddress && contractABI) {
-      const contract = new Contract(contractAddress, contractABI, newSigner);
-      setCertificateContract(contract);
-      console.log('Contract Initialized:', contractAddress);
+      try {
+        // FIX 2: Use ethers.getAddress to validate and normalize the address string
+        const validatedAddress = ethers.getAddress(contractAddress); 
+        const contract = new Contract(validatedAddress, contractABI, newSigner);
+        setCertificateContract(contract);
+        console.log('Contract Initialized:', validatedAddress);
+      } catch (error) {
+        console.error("Contract Initialization Error: Invalid Address Format. Check .env file.", error);
+        // Set state to show the user the problem
+        setIssuingStatus('Contract Initialization Failed: Check Contract Address in .env');
+      }
     }
   };
 
@@ -285,6 +294,8 @@ function App() {
     </div>
   );
 
+
+  // --- Rendering UI Components ---
 
   return (
     <div className="App">
