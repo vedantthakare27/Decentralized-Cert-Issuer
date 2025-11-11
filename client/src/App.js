@@ -30,7 +30,7 @@ function App() {
   const initializeContract = (newSigner) => {
     if (contractAddress && contractABI) {
       try {
-        // FIX: Ensure '0x' prefix is present but skip strict checksum validation
+        // Ensure '0x' prefix is present
         const prefixedAddress = contractAddress.startsWith('0x') 
           ? contractAddress 
           : `0x${contractAddress}`;
@@ -60,7 +60,7 @@ function App() {
             return false;
         }
 
-        // 2. Create the provider with the network ID (Fixes UNCONFIGURED_NAME)
+        // 2. Create the provider explicitly passing the chainId (Robust Fix for UNCONFIGURED_NAME)
         const provider = new BrowserProvider(ethereum, currentChainId);
         
         // 3. Get the Signer (Crucial for sending transactions)
@@ -173,6 +173,7 @@ function App() {
       setIssuingStatus(`Registering hash on blockchain: ${hashBytes32.substring(0, 8)}...`);
 
       // Connect the contract to the signer to send a transaction
+      // This is the point where the transaction is prepared and the network context must be correct.
       const contractWithSigner = certificateContract.connect(signer);
       
       const tx = await contractWithSigner.issueCertificate(
@@ -188,7 +189,7 @@ function App() {
 
     } catch (error) {
       console.error("Issuing Error:", error);
-      // Specific error handling for the UNCONFIGURED_NAME issue
+      // Catch specific errors related to network context
       if (error.code === 'UNCONFIGURED_NAME' || error.message.includes('network is not supported') || error.message.includes('chain is not currently supported')) {
          setIssuingStatus(`Issuing Failed: Network Error. Please ensure Rabby is on Sepolia (Chain ID: 11155111) and refresh.`);
       } else {
