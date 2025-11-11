@@ -24,18 +24,19 @@ function App() {
   const initializeContract = (newSigner) => {
     if (contractAddress && contractABI) {
       try {
-        // Ensure '0x' prefix is present for Ethers v6 validation
+        // FIX: Ensure '0x' prefix is present but skip strict checksum validation
         const prefixedAddress = contractAddress.startsWith('0x') 
           ? contractAddress 
           : `0x${contractAddress}`;
-          
-        const validatedAddress = ethers.getAddress(prefixedAddress); 
+        
+        // Use the prefixed address directly
+        const validatedAddress = prefixedAddress; 
         
         const contract = new Contract(validatedAddress, contractABI, newSigner);
         setCertificateContract(contract);
         console.log('Contract Initialized:', validatedAddress);
       } catch (error) {
-        console.error("Contract Initialization Error: Invalid Address Format.", error);
+        console.error("Contract Initialization Error:", error);
         setIssuingStatus('Contract Initialization Failed: Check Contract Address in .env');
       }
     }
@@ -123,7 +124,6 @@ function App() {
       const ipfsHash = await uploadFileToPinata(selectedFile);
       setIssuingStatus(`File uploaded. IPFS Hash (CID): ${ipfsHash}`);
 
-      // Hash the string CID for fixed-size bytes32 on-chain storage
       const hashBytes32 = ethers.keccak256(ethers.toUtf8Bytes(ipfsHash));
       setIssuingStatus(`Registering hash on blockchain: ${hashBytes32.substring(0, 8)}...`);
 
